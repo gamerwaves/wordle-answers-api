@@ -5,26 +5,70 @@
 		word: '-----',
 		puzzle: '',
 		error: '',
-		date: ''
+		date: '',
+		maxDate: new Date(new Date().getTime() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 	});
+
+	const MIN_DATE = '2021-06-19';
+
+	async function findMaxDate(startDate) {
+		let current = new Date(startDate + 'T12:00:00');
+		while (true) {
+			current.setDate(current.getDate() + 7);
+			const testDate = current.toISOString().split('T')[0];
+			const res = await fetch(`/api?date=${testDate}`);
+			if (!res.ok) {
+				while (true) {
+					current.setDate(current.getDate() - 1);
+					const fineDate = current.toISOString().split('T')[0];
+					const fineRes = await fetch(`/api?date=${fineDate}`);
+					if (fineRes.ok) {
+						state.maxDate = fineDate;
+						return;
+					}
+				}
+			}
+			state.maxDate = testDate;
+			if (new Date(testDate) > new Date(new Date().getTime() + 1000 * 24 * 60 * 60 * 1000)) break;
+		}
+	}
 
 	async function loadWordle(targetDate = null) {
 		try {
 			if (!targetDate && !state.date) {
-				const localDate = new Intl.DateTimeFormat('en-CA', {
+				state.date = new Intl.DateTimeFormat('en-CA', {
 					year: 'numeric',
 					month: '2-digit',
 					day: '2-digit'
 				}).format(new Date());
-				state.date = localDate;
+				findMaxDate(state.date);
 			} else if (targetDate) {
 				state.date = targetDate;
 			}
 
-			const url = `/api?date=${state.date}&t=${Date.now()}`;
-			const response = await fetch(url, {
+			if (state.date < MIN_DATE) {
+				state.date = MIN_DATE;
+			}
+
+			const response = await fetch(`/api?date=${state.date}&t=${Date.now()}`, {
 				cache: 'no-store'
 			});
+
+			if (response.status === 500) {
+				const isFuture = new Date(state.date) > new Date();
+				if (isFuture) {
+					const prevDate = new Date(new Date(state.date).getTime() - 24 * 60 * 60 * 1000)
+						.toISOString()
+						.split('T')[0];
+					state.maxDate = prevDate;
+					if (state.date > state.maxDate) {
+						loadWordle(state.maxDate);
+						return;
+					}
+				}
+				throw new Error('Failed to fetch');
+			}
+
 			const data = await response.json();
 
 			if (data.error) {
@@ -63,14 +107,32 @@
 		loadWordle(e.target.value);
 	}
 
+	function isPrevDisabled() {
+		return state.date <= MIN_DATE;
+	}
+
+	function isNextDisabled() {
+		return state.date >= state.maxDate;
+	}
+
 	onMount(() => loadWordle());
 </script>
 
 <div class="dashboard">
 	<div class="nav-controls">
-		<button onclick={() => changeDate(-1)} aria-label="Previous Day">←</button>
-		<input type="date" value={state.date} onchange={handleCalendarChange} />
-		<button onclick={() => changeDate(1)} aria-label="Next Day">→</button>
+		<button onclick={() => changeDate(-1)} disabled={isPrevDisabled()} aria-label="Previous Day"
+			>←</button
+		>
+		<input
+			type="date"
+			value={state.date}
+			min={MIN_DATE}
+			max={state.maxDate}
+			onchange={handleCalendarChange}
+		/>
+		<button onclick={() => changeDate(1)} disabled={isNextDisabled()} aria-label="Next Day"
+			>→</button
+		>
 	</div>
 
 	{#if state.error}
@@ -119,7 +181,7 @@
 	}
 
 	input[type='date']::-webkit-calendar-picker-indicator {
-		filter: invert(58%) sepia(13%) saturate(1131%) hue-rotate(69deg) brightness(97%) contrast(85%); /* This approximates #6aaa64 */
+		filter: invert(58%) sepia(13%) saturate(1131%) hue-rotate(69deg) brightness(97%) contrast(85%);
 		cursor: pointer;
 	}
 
@@ -150,8 +212,14 @@
 		justify-content: center;
 	}
 
-	button:hover {
-		background: #5f9955;
+	button:disabled {
+		background: #3a3a3c;
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+
+	button:disabled:hover {
+		background: #3a3a3c;
 	}
 
 	button.refresh {
