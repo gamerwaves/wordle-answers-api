@@ -1,23 +1,20 @@
 export async function GET({ url }) {
-	const requestedDate = url.search.substring(1).match(/^\d{4}-\d{2}-\d{2}$/)
-		? url.search.substring(1)
-		: url.searchParams.get('date');
+	let requestedDate = url.searchParams.get('date');
+	if (!requestedDate) {
+		const match = url.search.substring(1).match(/^\d{4}-\d{2}-\d{2}$/);
+		if (match) requestedDate = match[0];
+	}
+
 	let targetDate;
 
 	if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
 		targetDate = requestedDate;
 	} else {
-		const now = new Date();
-		const tzOffset = url.searchParams.get('tzOffset');
-
-		if (tzOffset !== null) {
-			// tzOffset should be in minutes, similar to new Date().getTimezoneOffset()
-			const offset = parseInt(tzOffset) * 60000;
-			targetDate = new Date(now.getTime() - offset).toISOString().split('T')[0];
-		} else {
-			// Fallback to UTC or system time if no offset provided
-			targetDate = now.toISOString().split('T')[0];
-		}
+		targetDate = new Intl.DateTimeFormat('en-CA', {
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		}).format(new Date());
 	}
 
 	const response = await fetch(`https://www.nytimes.com/svc/wordle/v2/${targetDate}.json`);
