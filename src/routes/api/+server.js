@@ -1,5 +1,7 @@
 export async function GET({ url }) {
-	const requestedDate = url.searchParams.get('date');
+	const requestedDate = url.search.substring(1).match(/^\d{4}-\d{2}-\d{2}$/)
+		? url.search.substring(1)
+		: url.searchParams.get('date');
 	let targetDate;
 
 	if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
