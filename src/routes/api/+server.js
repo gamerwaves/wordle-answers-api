@@ -8,8 +8,16 @@ export async function GET({ url }) {
 		targetDate = requestedDate;
 	} else {
 		const now = new Date();
-		const offset = now.getTimezoneOffset() * 60000;
-		targetDate = new Date(now.getTime() - offset).toISOString().split('T')[0];
+		const tzOffset = url.searchParams.get('tzOffset');
+
+		if (tzOffset !== null) {
+			// tzOffset should be in minutes, similar to new Date().getTimezoneOffset()
+			const offset = parseInt(tzOffset) * 60000;
+			targetDate = new Date(now.getTime() - offset).toISOString().split('T')[0];
+		} else {
+			// Fallback to UTC or system time if no offset provided
+			targetDate = now.toISOString().split('T')[0];
+		}
 	}
 
 	const response = await fetch(`https://www.nytimes.com/svc/wordle/v2/${targetDate}.json`);

@@ -9,7 +9,10 @@
 
 	async function loadWordle() {
 		try {
-			const response = await fetch(`/api?t=${Date.now()}`, { cache: 'no-store' });
+			const tzOffset = new Date().getTimezoneOffset();
+			const response = await fetch(`/api?tzOffset=${tzOffset}&t=${Date.now()}`, {
+				cache: 'no-store'
+			});
 			const data = await response.json();
 
 			if (data.error) {
