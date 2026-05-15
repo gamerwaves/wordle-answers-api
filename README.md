@@ -2,7 +2,7 @@
 
 **A simple application that fetches and displays the daily Wordle solution.**
 
-**Visit a live demo: [https://wordle.dwait.dev/](https://wordle.dwait.dev/)**
+**Visit a live demo: [https://wordle.dwait.dev](https://wordle.dwait.dev/)**
 
 ## **Features**
 - **Dashboard**: View today's Wordle solution and puzzle number.
